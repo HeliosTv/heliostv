@@ -21,7 +21,7 @@ AC_CHECK_LIB([msgpack], [msgpack_unpack])
 #      [have_cpputest=yes], [have_cpputest=no])
 
 
-AC_CONFIG_FILES([Makefile daemon/Makefile])
+AC_CONFIG_FILES([Makefile src/daemon/Makefile])
 
 AC_OUTPUT
 
