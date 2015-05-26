@@ -1,7 +1,9 @@
 *.swp
 *.swo
 *.o
-
+*.lo
+*.la
+*~
 Makefile
 Makefile.in
 /autom4te.cache
@@ -15,3 +17,4 @@ Makefile.in
 /stamp-h1
 .deps
 .libs
+/m4
