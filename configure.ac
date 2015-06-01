@@ -49,6 +49,14 @@ PKG_CHECK_MODULES(GST, [
 ])
 
 
+PKG_CHECK_MODULES([GIO], [gio-2.0 >= 2.40],
+      [have_gio=yes], [
+   AC_MSG_ERROR([
+      You need to install or upgrade gio.
+  ])
+])
+
+
 AC_CONFIG_FILES([Makefile src/Makefile include/Makefile libheliostv/Makefile])
 
 AC_OUTPUT

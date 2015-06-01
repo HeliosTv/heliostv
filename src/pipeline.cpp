@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <include/heliostv.h>
+#include <gio/gio.h>
 
 
 /***********************************************************************************/
@@ -11,7 +12,7 @@
 typedef struct {
      const char *channel, *host;
      int frequency, port;
-     GstElement *pipeline, *dvbbasebin, *demuxer, *typefind, *tcpserversink;
+     GstElement *pipeline, *dvbbasebin, *demuxer, *typefind, *multisocketsink;
 } _CustomData;
 /***********************************************************************************/
 
@@ -239,12 +240,17 @@ int channel (const char *channels, _CustomData *data)
 
 
 /************************************* pipeline ************************************/
-int pipeline (const char *chaine, const char *host, int port)
+int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 {
   GMainLoop *loop;
 
   GstBus *bus;
   guint bus_watch_id;
+  GError **err;
+
+  g_print ("fd = %d\n",fd_socket);
+
+  GSocket *socket = g_socket_new_from_fd ((gint)fd_socket, err);
 
   _CustomData data;
 
@@ -268,11 +274,11 @@ int pipeline (const char *chaine, const char *host, int port)
   data.pipeline = gst_pipeline_new ("mpegtsplayer");
   data.dvbbasebin = gst_element_factory_make ("dvbbasebin", "dvbbasebin");
   data.typefind = gst_element_factory_make ("typefind", "typefind");
-  data.tcpserversink = gst_element_factory_make ("tcpserversink", "tcp-sink");
+  data.multisocketsink = gst_element_factory_make ("multisocketsink", "tcp-sink");
 
  
   /* check audio/video */
-  if (!data.pipeline || !data.dvbbasebin || !data.typefind || !data.tcpserversink)
+  if (!data.pipeline || !data.dvbbasebin || !data.typefind || !data.multisocketsink)
   {
     g_print ("One element could not be created. Exiting.\n");
     return -1;
@@ -293,25 +299,33 @@ int pipeline (const char *chaine, const char *host, int port)
   g_object_set (G_OBJECT (data.dvbbasebin), "program-numbers", data.channel, NULL);
 
   /* set the properties of queueaudio */
-  g_object_set (G_OBJECT (data.tcpserversink), "host", data.host, NULL);
-  g_object_set (G_OBJECT (data.tcpserversink), "port", data.port, NULL);
+  //g_object_set (G_OBJECT (data.tcpserversink), "host", data.host, NULL);
+  //g_object_set (G_OBJECT (data.tcpserversink), "port", data.port, NULL);
+  g_object_set (G_OBJECT (data.multisocketsink),
+      "unit-format", GST_FORMAT_TIME,
+      "units-max", (gint64) 7 * GST_SECOND,
+      "units-soft-max", (gint64) 3 * GST_SECOND,
+      "recover-policy", 3 /* keyframe */ ,
+      "timeout", (guint64) 10 * GST_SECOND,
+      "sync-method", 1 /* next-keyframe */ ,
+      NULL); 
 
 
   /* we add all elements into the pipeline */
-  gst_bin_add_many (GST_BIN (data.pipeline), data.dvbbasebin, data.typefind, data.tcpserversink, NULL);
+  gst_bin_add_many (GST_BIN (data.pipeline), data.dvbbasebin, data.typefind, data.multisocketsink, NULL);
 
   g_print ("Added all the Elements into the pipeline\n");
 
   /* we link the elements together */
-  gst_element_link_many (data.dvbbasebin, data.typefind, data.tcpserversink, NULL);
+  gst_element_link_many (data.dvbbasebin, data.typefind, data.multisocketsink, NULL);
 
   g_print ("Linked all the Elements together\n");
-
 
   /* Set the pipeline to "playing" state*/
   g_print ("Playing the video\n");
   gst_element_set_state (data.pipeline, GST_STATE_PLAYING);
 
+  g_signal_emit_by_name (data.multisocketsink, "add", socket);
 
   /* Iterate */
   g_print ("Running...\n");
