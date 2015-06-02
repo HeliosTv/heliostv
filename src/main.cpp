@@ -162,19 +162,20 @@ private:
 
       if (test==0)
       {
-        client_n = rand()%126+1;
+        client_n = rand()+1;
         strcpy(answer, "OK");
         while(new_list->is_present(client_n))
         {
-          client_n = rand()%126+1;
+          client_n = rand()+1;
         }
         new_list->add(client_n);
       }
 
       new_list->get();
 
-      msgpack::type::tuple<int> pack(client_n);
-      std::cout << "answer : " << std::get<0>(pack) << std::endl;
+      //msgpack::type::tuple<double> pack(client_n);
+      msgpack::type::tuple<int, std::string> pack(client_n, answer);
+      std::cout << "client : " << std::get<0>(pack) << std::endl;
       msgpack::pack(sbuf, pack);
 
       boost::asio::async_write(socket_,
@@ -307,7 +308,9 @@ private:
       if (test==1 && new_list->is_present(std::get<1>(dst)))
       {
         strcpy(answer, "OK");
-        msgpack::pack(sbuf, answer);
+
+        msgpack::type::tuple<std::string> pack(answer);
+        msgpack::pack(sbuf, pack);
         boost::asio::async_write(socket_,
             boost::asio::buffer(sbuf.data(), bytes_transferred),
             boost::bind(&session_streaming::handle_write, this,
