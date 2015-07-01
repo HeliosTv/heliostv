@@ -1,21 +1,105 @@
+#include <include/heliostv.h>
+#include <vector>
+#include <cstdlib>
 #include <gst/gst.h>
 #include <glib.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <include/heliostv.h>
 #include <gio/gio.h>
+
+/***********************************************************************************/
+/************************** class channel list singleton ***************************/
+class channel_list
+{
+private:
+   std::vector<int> channel_number;
+
+   channel_list () : channel_number({})
+      {
+      }
+
+   //token_list* operator= (const token_list*){}
+
+public:
+   static channel_list* Instantiate()
+      {
+        static channel_list *list = NULL;
+        if(list == NULL)
+        {
+            list = new channel_list();
+        }
+        return list;
+      }
+
+   bool is_present(int data)
+      { 
+        for (int i = 0; i<channel_number.size() ;i++) 
+        {
+          if (data == channel_number[i])
+          {
+            return TRUE;
+          }
+        }
+        return FALSE;
+      }
+
+   void add (int data) 
+      { 
+        channel_number.push_back(data);
+      }
+
+   void remove (int data) 
+      { 
+        for (int i = 0; i<channel_number.size() ;i++) 
+        {
+          if (data == channel_number[i])
+          {
+            channel_number.erase(channel_number.begin()+i);
+          }
+        }
+      }
+
+   int get_size () 
+      { 
+	int size = channel_number.size();
+	return size;
+      }
+
+};
+/***********************************************************************************/
+
 
 
 /***********************************************************************************/
 /******************************* Def Struct Pipeline *******************************/
 typedef struct {
-     const char *channel, *host;
-     int frequency, port;
-     GstElement *pipeline, *dvbbasebin, *demuxer, *typefind, *multisocketsink;
+     const char *channel, *pids;
+     int frequency;
+     GstElement *pipeline, *dvbsrc, *tee, *multisocketsink[6];
 } _CustomData;
 /***********************************************************************************/
 
+
+
+/***********************************************************************************/
+/************************************ Debug Dot ************************************/
+void GeneratePipelineDot(GstElement *Pipeline)
+{
+   guint Step = 0;
+   if(Pipeline == NULL)
+      return;
+   gchar *DotName;
+   char *sz_ElementName = gst_element_get_name(Pipeline);
+   DotName = g_strdup_printf ("%s_%i", sz_ElementName, Step);
+   Step++;
+   GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS (GST_BIN (Pipeline),
+         GST_DEBUG_GRAPH_SHOW_ALL, DotName);
+   g_free (DotName);
+   g_free (sz_ElementName);
+   return ;
+}
+/***********************************************************************************/
 
 
 
@@ -27,7 +111,7 @@ static void on_pad_added (GstElement *element, GstPad *pad, gpointer data)
   GstElement *decoder = (GstElement *) data;
 
   /* We can now link this pad with the vorbis-decoder sink pad */
-  g_print ("------> Dynamic pad created, linking decoder/converter\n");
+  g_print ("Dynamic pad created, linking demuxer/decoder\n");
 
   sinkpad = gst_element_get_static_pad (decoder, "sink");
 
@@ -39,25 +123,25 @@ static void on_pad_added (GstElement *element, GstPad *pad, gpointer data)
 
 
 
-
 /***********************************************************************************/
 /********************************* Select Channel **********************************/
 int channel (const char *channels, _CustomData *data)
 {
+	  data->pids = "0";
    if (!strcmp(channels,"TF1") || !strcmp(channels,"1"))
           {
-          data->channel="1537";
           data->frequency=562000000;
+	  data->pids = "0,100,120,130,131,133,1537";
           }
     else if (!strcmp(channels,"France2") || !strcmp(channels,"2"))
           {
-          data->channel="257";
           data->frequency=586000000;
+	  data->pids = "0,110,120,130,131,132,257";
           }
     else if (!strcmp(channels,"France3") || !strcmp(channels,"3"))
           {
-          data->channel="273";
           data->frequency=586000000;
+	  data->pids = "0,210,220,230,231,273";
           }
     else if (!strcmp(channels,"CANAL+") || !strcmp(channels,"4"))
           {
@@ -76,8 +160,8 @@ int channel (const char *channels, _CustomData *data)
           }
     else if (!strcmp(channels,"ARTE") || !strcmp(channels,"7"))
           {
-          data->channel="1543";
           data->frequency=562000000;
+	  data->pids = "0,700,720,730,731,732,733,1543";
           }
     else if (!strcmp(channels,"D8") || !strcmp(channels,"8"))
           {
@@ -91,8 +175,8 @@ int channel (const char *channels, _CustomData *data)
           }
     else if (!strcmp(channels,"TMC") || !strcmp(channels,"10"))
           {
-          data->channel="1542";
           data->frequency=562000000;
+	  data->pids = "0,600,620,630,631,633,1542";
           }
     else if (!strcmp(channels,"NT1") || !strcmp(channels,"11"))
           {
@@ -101,8 +185,8 @@ int channel (const char *channels, _CustomData *data)
           }
     else if (!strcmp(channels,"NRJ12") || !strcmp(channels,"12"))
           {
-          data->channel="1538";
           data->frequency=562000000;
+	  data->pids = "0,210,220,230,232,233,1538";
           }
     else if (!strcmp(channels,"LCP") || !strcmp(channels,"13"))
           {
@@ -152,22 +236,22 @@ int channel (const char *channels, _CustomData *data)
     else if (!strcmp(channels,"6TER") || !strcmp(channels,"22"))
         {
           data->channel="2817";
-          data->frequency=642000000;
+          data->frequency=770000000;
           }
     else if (!strcmp(channels,"NUMERO23") || !strcmp(channels,"23"))
           {
           data->channel="2818";
-          data->frequency=562000000;
+          data->frequency=770000000;
           }
     else if (!strcmp(channels,"RMC") || !strcmp(channels,"24"))
           {
           data->channel="2819";
-          data->frequency=562000000;
+          data->frequency=770000000;
           }
     else if (!strcmp(channels,"CHERIE25") || !strcmp(channels,"25"))
           {
           data->channel="2563";
-          data->frequency=562000000;
+          data->frequency=642000000;
           }
     else if (!strcmp(channels,"IDF1") || !strcmp(channels,"32"))
           {
@@ -206,23 +290,23 @@ int channel (const char *channels, _CustomData *data)
           }
     else if (!strcmp(channels,"LCI") || !strcmp(channels,"48"))
           {
-          data->channel="1539";
           data->frequency=562000000;
+	  data->pids = "0,300,320,330,1539";
           }
     else if (!strcmp(channels,"TF1HD") || !strcmp(channels,"51"))
           {
-          data->channel="1281";
           data->frequency=530000000;
+	  data->pids = "0,110,120,130,131,132,1281";
           }
     else if (!strcmp(channels,"France2HD") || !strcmp(channels,"52"))
           {
-          data->channel="1282";
           data->frequency=530000000;
+	  data->pids = "0,210,220,230,231,232,1282";
           }
     else if (!strcmp(channels,"M6HD") || !strcmp(channels,"56"))
           {
-          data->channel="1283";
           data->frequency=530000000;
+	  data->pids = "0,310,320,330,331,332,1283";
           }
     else if (!strcmp(channels,"ARTEHD") || !strcmp(channels,"57"))
           {
@@ -238,108 +322,196 @@ int channel (const char *channels, _CustomData *data)
 
 
 
-
 /************************************* pipeline ************************************/
 int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 {
+  g_print ("mpegtspidfilter\n");
+
   GMainLoop *loop;
 
-  GstBus *bus;
-  guint bus_watch_id;
   GError **err;
 
   g_print ("fd = %d\n",fd_socket);
 
+  int i = 0;
+  bool end = false;
+
+  channel_list *list;
+  list = channel_list::Instantiate();
+
   GSocket *socket = g_socket_new_from_fd ((gint)fd_socket, err);
 
-  _CustomData data;
+  static _CustomData *data = NULL;
 
-  int Test=0;
+  if (data == NULL)
+    { 
+    GstPadTemplate *tee_src_pad_template;
+    GstPad *tee_channel_pad, *mpegtspidfilter_channel_pad;
 
-  data.host = host;
-  data.port = port;
+    data = (_CustomData*)malloc(sizeof(_CustomData));
 
+    int Test=0;
 
-  /* Initialisation */
-  loop = g_main_loop_new (NULL, FALSE);
+    /* Initialisation */
+    loop = g_main_loop_new (NULL, FALSE);
 
+    /* set the channel */
+    Test=channel(chaine, data);
+    if (Test==-1)
+      return -1;
 
-  /* set the channel */
-  Test=channel(chaine, &data);
-  if (Test==-1)
-    return -1;
-
-
-  /* Create gstreamer elements */
-  data.pipeline = gst_pipeline_new ("mpegtsplayer");
-  data.dvbbasebin = gst_element_factory_make ("dvbbasebin", "dvbbasebin");
-  data.typefind = gst_element_factory_make ("typefind", "typefind");
-  data.multisocketsink = gst_element_factory_make ("multisocketsink", "tcp-sink");
+    /* Create gstreamer elements */
+    data->pipeline = gst_pipeline_new ("mpegtsplayer");
+    data->dvbsrc = gst_element_factory_make ("dvbsrc", "dvbsrc");
+    data->tee = gst_element_factory_make ("tee", "tee");
 
  
-  /* check audio/video */
-  if (!data.pipeline || !data.dvbbasebin || !data.typefind || !data.multisocketsink)
-  {
-    g_print ("One element could not be created. Exiting.\n");
-    return -1;
+    /* check creation */
+    if (!data->pipeline || !data->dvbsrc || !data->tee)
+    {
+      g_print ("One element could not be created-> Exiting->\n");
+      return -1;
+    }
+
+    /* Set up the pipeline */
+    g_print ("Elements are created\n");
+
+    /* set the properties of dvbsrc */
+    g_object_set (G_OBJECT (data->dvbsrc), "frequency", data->frequency, NULL);
+    g_object_set (G_OBJECT (data->dvbsrc), "inversion", 1, NULL);
+    g_object_set (G_OBJECT (data->dvbsrc), "code-rate-lp", 1, NULL);
+    g_object_set (G_OBJECT (data->dvbsrc), "bandwidth", 0, NULL);
+    g_object_set (G_OBJECT (data->dvbsrc), "modulation", 1, NULL);
+    g_object_set (G_OBJECT (data->dvbsrc), "trans_mode", 1, NULL);
+    g_object_set (G_OBJECT (data->dvbsrc), "guard", 1, NULL);
+    g_object_set (G_OBJECT (data->dvbsrc), "hierarchy", 1, NULL);
+
+
+    /* we add all elements into the pipeline */
+    gst_bin_add_many (GST_BIN (data->pipeline), data->dvbsrc, data->tee, NULL);
+
+    GeneratePipelineDot(data->pipeline); //Debug
+
+    g_print ("Added all the Elements into the pipeline\n");
+
+    /* we link the elements together */
+    gst_element_link (data->dvbsrc, data->tee);
   }
 
-  /* Set up the pipeline */
-  g_print ("Elements are created\n");
+  if (!list->is_present(atoi(chaine)))
+  {
+    int Test;
+    Test=channel(chaine, data);
+    if (Test==-1)
+      return -1;
 
-  /* set the properties of dvbbasebin */
-  g_object_set (G_OBJECT (data.dvbbasebin), "frequency", data.frequency, NULL);
-  g_object_set (G_OBJECT (data.dvbbasebin), "inversion", 1, NULL);
-  g_object_set (G_OBJECT (data.dvbbasebin), "code-rate-lp", 1, NULL);
-  g_object_set (G_OBJECT (data.dvbbasebin), "bandwidth", 0, NULL);
-  g_object_set (G_OBJECT (data.dvbbasebin), "modulation", 1, NULL);
-  g_object_set (G_OBJECT (data.dvbbasebin), "trans_mode", 1, NULL);
-  g_object_set (G_OBJECT (data.dvbbasebin), "guard", 1, NULL);
-  g_object_set (G_OBJECT (data.dvbbasebin), "hierarchy", 1, NULL);
-  g_object_set (G_OBJECT (data.dvbbasebin), "program-numbers", data.channel, NULL);
+    while (i<=6 && !end)
+    {
+      GstElement *mpegtspidfilter[6];
+      GstPadTemplate *tee_src_pad_template[6];
+      GstPad *tee_channel_pad[6], *mpegtspidfilter_channel_pad[6];
 
-  /* set the properties of queueaudio */
-  //g_object_set (G_OBJECT (data.tcpserversink), "host", data.host, NULL);
-  //g_object_set (G_OBJECT (data.tcpserversink), "port", data.port, NULL);
-  g_object_set (G_OBJECT (data.multisocketsink),
-      "unit-format", GST_FORMAT_TIME,
-      "units-max", (gint64) 7 * GST_SECOND,
-      "units-soft-max", (gint64) 3 * GST_SECOND,
-      "recover-policy", 3 /* keyframe */ ,
-      "timeout", (guint64) 10 * GST_SECOND,
-      "sync-method", 1 /* next-keyframe */ ,
-      NULL); 
+      g_print ("size : %d\n", list->get_size());
 
+      if (list->get_size() == i)
+      {
+	list->add(atoi(chaine));
 
-  /* we add all elements into the pipeline */
-  gst_bin_add_many (GST_BIN (data.pipeline), data.dvbbasebin, data.typefind, data.multisocketsink, NULL);
+	/* Create gstreamer elements */
+	char name_mpegtspidfilter[20], name_multisocketsink[20];
+	sprintf(name_mpegtspidfilter, "mpegtspidfilter_%d", i);
+	sprintf(name_multisocketsink, "multisocketsink_%d", i);
+	mpegtspidfilter[i] = gst_element_factory_make ("mpegtspidfilter", name_mpegtspidfilter);
+	data->multisocketsink[i] = gst_element_factory_make ("multisocketsink", name_multisocketsink);
 
-  g_print ("Added all the Elements into the pipeline\n");
+ 
+	/* check creation */
+	if (!mpegtspidfilter[i] || !data->multisocketsink[i])
+	{
+	  g_print ("One element could not be created-> Exiting->\n");
+	  return -1;
+	}
 
-  /* we link the elements together */
-  gst_element_link_many (data.dvbbasebin, data.typefind, data.multisocketsink, NULL);
+	/* Set up the pipeline */
+	g_print ("Elements are created\n");
 
-  g_print ("Linked all the Elements together\n");
+	/* set the properties of mpegtspidfilter */
+	g_object_set (G_OBJECT (mpegtspidfilter[i]), "pids", data->pids, NULL);
+	g_print ("pids : %s\n", data->pids);
+
+	/* set the properties of multisocketsink */
+	g_object_set (G_OBJECT (data->multisocketsink[i]),
+	     "unit-format", GST_FORMAT_TIME,
+	     "units-max", (gint64) 7 * GST_SECOND,
+	     "units-soft-max", (gint64) 3 * GST_SECOND,
+	     "recover-policy", 3 /* keyframe */ ,
+	     "timeout", (guint64) 10 * GST_SECOND,
+	     "sync-method", 1 /* next-keyframe */ ,
+	     NULL); 
+
+	/* we add all elements into the pipeline */
+	gst_bin_add_many (GST_BIN (data->pipeline), mpegtspidfilter[i], data->multisocketsink[i], NULL);
+
+	g_print ("Added all the Elements into the pipeline\n");
+
+	/* we link the elements together */
+	gst_element_link (mpegtspidfilter[i], data->multisocketsink[i]);
+
+	/* Manually link the Tee, which has "Request" pads */
+	/*tee_src_pad_template[i] = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data->tee), "src_%u");
+	tee_channel_pad[i] = gst_element_request_pad (data->tee, tee_src_pad_template[i], "src_%u", NULL);
+	mpegtspidfilter_channel_pad[i] = gst_element_get_static_pad (mpegtspidfilter[i], "sink");
+	gst_pad_link (tee_channel_pad[i], mpegtspidfilter_channel_pad[i]);
+	gst_object_unref (mpegtspidfilter_channel_pad[i]);
+*/
+ 	g_signal_connect (data->tee, "pad-added", G_CALLBACK(on_pad_added), mpegtspidfilter[i]);
+
+	tee_src_pad_template[i] = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data->tee), "src_%u");
+	tee_channel_pad[i] = gst_element_request_pad (data->tee, tee_src_pad_template[i], "src_%u", NULL);
+
+	g_print ("Linked all the Elements together\n");
+
+	end = true;
+      }
+      i++;
+    }
+  }
+  else
+  {
+    g_signal_emit_by_name (data->multisocketsink[0], "add", socket);
+  }
+
 
   /* Set the pipeline to "playing" state*/
   g_print ("Playing the video\n");
-  gst_element_set_state (data.pipeline, GST_STATE_PLAYING);
+  gst_element_set_state (data->pipeline, GST_STATE_PLAYING);
 
-  g_signal_emit_by_name (data.multisocketsink, "add", socket);
+  GeneratePipelineDot(data->pipeline); //Debug
+
+  g_print ("i = %d\n", i);
+  g_signal_emit_by_name (data->multisocketsink[i-1], "add", socket);
 
   /* Iterate */
   g_print ("Running...\n");
+
+  GeneratePipelineDot(data->pipeline); //Debug
+
+  /*if ( no more client )
+    free(data);*/
+
+  #if 0 
   g_main_loop_run (loop);
 
 
   /* Out of the main loop, clean up nicely */
   g_print ("Returned, stopping playback\n");
-  gst_element_set_state (data.pipeline, GST_STATE_NULL);
+  gst_element_set_state (data->pipeline, GST_STATE_NULL);
 
   g_print ("Deleting pipeline\n");
-  gst_object_unref (GST_OBJECT (data.pipeline));
+  gst_object_unref (GST_OBJECT (data->pipeline));
   g_source_remove (bus_watch_id);
   g_main_loop_unref (loop);
+  #endif
 
   return 0;
 } 

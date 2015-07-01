@@ -1,5 +1,5 @@
-#ifndef __CONTROLCHANNEL_H
-#define __CONTROLCHANNEL_H
+#ifndef __STREAM_H
+#define __STREAM_H
 
 /*
 *****************************************************************************
@@ -13,7 +13,7 @@
 *     have been supplied.
 *****************************************************************************/
 /**
-* @file     ControlChannel.h
+* @file     Stream.h
 * @author   R. Picard
 * @date     13/05/2015
 *
@@ -28,36 +28,33 @@
 #include <msgpack.hpp>
 
 #include "ITransportClient.h"
-#include "IChannelFactory.h"
-#include "Stream.h"
-
-#define max_length			1024
 
 namespace HeliosTv {
 
-class ControlChannel
+class Stream
 {
     public:
-                ControlChannel(ITransportClient *transport, IChannelFactory *factory, int features);
-        virtual ~ControlChannel(void);
-
-		boost::unique_future<HeliosTv::Stream*> newStream(std::string &uri, int token);
+                Stream(ITransportClient *transport, std::string &uri);
+        virtual ~Stream(void);
 
 		boost::unique_future<int> connect();
 
-		boost::unique_future<int> write();
+		boost::unique_future<int> authorize(int token);
 
-		boost::unique_future<int> read();
+		std::size_t read(boost::asio::mutable_buffers_1 buffer);
+
+		std::size_t available();
+
+		boost::asio::mutable_buffers_1 get_data_buffer();
 
     private:
 		ITransportClient *transport;
-		IChannelFactory *factory;
-		int features;
+		std::string &uri;
 
 };
 
 } // namespace
 
 
-#endif /* __CONTROLCHANNEL_H */
+#endif /* __STREAM_H */
 

@@ -38,58 +38,44 @@ private:
    //token_list* operator= (const token_list*){}
 
 public:
-   static token_list* Instance()
+   static token_list* Instantiate()
       {
         static token_list *list = NULL;
         if(list == NULL)
         {
             list = new token_list();
-            list->get();
         }
-        std::cout << "token list has been created! \n" << std::endl;
         return list;
       }
 
 
    void get()
       { 
-        std::cout << "starting get function" << std::endl;
-        std::cout << "this list contains : ";
         for (int i = 0; i<token.size() ;i++) 
         {
            std::cout << token[i] << " ";
         }
-        std::cout << "\n" << std::endl;
       }
 
    bool is_present(int data)
       { 
-        std::cout << "starting is_present function" << std::endl;
         for (int i = 0; i<token.size() ;i++) 
         {
           if (data == token[i])
           {
-            std::cout << "data : " << data << " is present" << std::endl;
-            std::cout << "\n" << std::endl;
             return TRUE;
           }
         }
-        std::cout << "data : " << data << " is not present" << std::endl;
-        std::cout << "\n" << std::endl;
         return FALSE;
       }
 
    void add (int data) 
       { 
-        std::cout << "starting add function" << std::endl;
         token.push_back(data);
-        std::cout << "data : " << data << " has been added" << std::endl;
-        std::cout << "\n" << std::endl;
       }
 
    void remove (int data) 
       { 
-        std::cout << "starting remove function" << std::endl;
         for (int i = 0; i<token.size() ;i++) 
         {
           if (data == token[i])
@@ -97,15 +83,11 @@ public:
             token.erase(token.begin()+i);
           }
         }
-        std::cout << "data : " << data << " has been erased" << std::endl;
-        std::cout << "\n" << std::endl;
       }
 
    void remove_all () 
       { 
         token.erase(token.begin(),token.end());
-        std::cout << "all data have been erased" << std::endl;
-        std::cout << "\n" << std::endl;
       }
 };
 /***********************************************************************************/
@@ -144,7 +126,7 @@ private:
     if (!error)
     {
       token_list *new_list;
-      new_list = token_list::Instance();
+      new_list = token_list::Instantiate();
 
       msgpack::unpack(&msg, data_, bytes_transferred);
       msgpack::type::tuple<int> dst;
@@ -158,30 +140,28 @@ private:
       fd = socket_.native_handle();
       std::cout << "fd : " << fd << std::endl;
 
-      new_list->get();
-
       if (test==0)
       {
-        client_n = rand()+1;
+        client_n = rand()%1000000+1;
         strcpy(answer, "OK");
         while(new_list->is_present(client_n))
         {
-          client_n = rand()+1;
+          client_n = rand()%1000000+1;
         }
         new_list->add(client_n);
       }
 
       new_list->get();
 
-      //msgpack::type::tuple<double> pack(client_n);
       msgpack::type::tuple<int, std::string> pack(client_n, answer);
-      std::cout << "client : " << std::get<0>(pack) << std::endl;
       msgpack::pack(sbuf, pack);
 
+      std::cout << "\nSending data : " << sbuf.size() << std::endl;
       boost::asio::async_write(socket_,
-          boost::asio::buffer(sbuf.data(), bytes_transferred),
+          boost::asio::buffer(sbuf.data(), sbuf.size()),
           boost::bind(&session_control::handle_write, this,
             boost::asio::placeholders::error));
+      std::cout << "Sent : " << fd << std::endl;
       std::cout << std::endl;
     }
     else
@@ -266,7 +246,7 @@ public:
   session_streaming(boost::asio::io_service& io_service, short port)
     : socket_(io_service),
       port_(port),
-      fd(2)
+      fd(0)
   {
   }
 
@@ -290,7 +270,7 @@ private:
     if (!error)
     {
       token_list *new_list;
-      new_list = token_list::Instance();
+      new_list = token_list::Instantiate();
 
       new_list->get();
 
@@ -301,7 +281,7 @@ private:
       char answer[6] = "NOK";
       int test = std::get<0>(dst);
 
-      std::cout << "fd : " << fd << std::endl;
+      std::cout << "\nfd : " << fd << std::endl;
       fd = socket_.native_handle();
       std::cout << "fd : " << fd << std::endl;
 
@@ -312,7 +292,7 @@ private:
         msgpack::type::tuple<std::string> pack(answer);
         msgpack::pack(sbuf, pack);
         boost::asio::async_write(socket_,
-            boost::asio::buffer(sbuf.data(), bytes_transferred),
+            boost::asio::buffer(sbuf.data(), sbuf.size()),
             boost::bind(&session_streaming::handle_write, this,
               boost::asio::placeholders::error));
         pipeline(std::get<2>(dst).c_str(), "localhost", port_, fd);
@@ -420,38 +400,7 @@ int main(int argc, char* argv[])
     }
 
     token_list *new_list;
-    new_list = token_list::Instance();
-    
-/*
-    new_list->get();
-    if (!new_list->is_present(12))
-      new_list->add(12);
-    if (!new_list->is_present(10))
-      new_list->add(10);
-    if (!new_list->is_present(1050))
-      new_list->add(1050);
-    if (!new_list->is_present(12))
-      new_list->add(12);
-    if (!new_list->is_present(27))
-      new_list->add(27);
-    if (!new_list->is_present(85))
-      new_list->add(85);
-
-    new_list->get();
-
-    if (new_list->is_present(10))
-      new_list->remove(10);
-
-    if (new_list->is_present(27))
-      new_list->remove(27);
-
-    if (new_list->is_present(855))
-      new_list->remove(855);
-    new_list->get();
-
-    new_list->remove_all();
-    new_list->get();
-    */
+    new_list = token_list::Instantiate();
 
     boost::asio::io_service io_service;
 

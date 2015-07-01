@@ -1,5 +1,5 @@
-#ifndef __CONTROLCHANNEL_H
-#define __CONTROLCHANNEL_H
+#ifndef __TCPCHANNELFACTORY_H
+#define __TCPCHANNELFACTORY_H
 
 /*
 *****************************************************************************
@@ -13,51 +13,43 @@
 *     have been supplied.
 *****************************************************************************/
 /**
-* @file     ControlChannel.h
+* @file     TcpChannelFactory.h
 * @author   R. Picard
 * @date     13/05/2015
 *
 ******************************************************************************
 */
 
-#include <cstdlib>
-#include <string>
-
-#include <boost/thread/future.hpp>
-
-#include <msgpack.hpp>
-
-#include "ITransportClient.h"
+#include "ControlChannel.h"
+#include "TcpClient.h"
 #include "IChannelFactory.h"
 #include "Stream.h"
 
-#define max_length			1024
-
 namespace HeliosTv {
 
-class ControlChannel
+class TcpChannelFactory: public IChannelFactory
 {
     public:
-                ControlChannel(ITransportClient *transport, IChannelFactory *factory, int features);
-        virtual ~ControlChannel(void);
+                TcpChannelFactory(void);
+        virtual ~TcpChannelFactory(void);
 
-		boost::unique_future<HeliosTv::Stream*> newStream(std::string &uri, int token);
+		ControlChannel* newControlChannel(int features);
+		boost::unique_future<HeliosTv::Stream*> newStreamChannel(std::string &uri, int token);
 
-		boost::unique_future<int> connect();
+		void setHost(std::string &host);
+		void setControlPort(int port);
+		void setDataPort(int port);
 
-		boost::unique_future<int> write();
-
-		boost::unique_future<int> read();
+		static TcpChannelFactory* Instantiate(void);
 
     private:
-		ITransportClient *transport;
-		IChannelFactory *factory;
-		int features;
-
+		std::string host;
+		int port_control;
+		int port_stream;
 };
 
 } // namespace
 
 
-#endif /* __CONTROLCHANNEL_H */
+#endif /* __TCPCHANNELFACTORY_H */
 

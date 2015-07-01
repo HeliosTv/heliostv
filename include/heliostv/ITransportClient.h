@@ -1,5 +1,5 @@
-#ifndef __CONTROLCHANNEL_H
-#define __CONTROLCHANNEL_H
+#ifndef __ITRANSPORTCLIENT_H
+#define __ITRANSPORTCLIENT_H
 
 /*
 *****************************************************************************
@@ -13,7 +13,7 @@
 *     have been supplied.
 *****************************************************************************/
 /**
-* @file     ControlChannel.h
+* @file     ITransportClient.h
 * @author   R. Picard
 * @date     13/05/2015
 *
@@ -21,43 +21,30 @@
 */
 
 #include <cstdlib>
-#include <string>
-
+#include <boost/asio.hpp>
 #include <boost/thread/future.hpp>
-
-#include <msgpack.hpp>
-
-#include "ITransportClient.h"
-#include "IChannelFactory.h"
-#include "Stream.h"
-
-#define max_length			1024
 
 namespace HeliosTv {
 
-class ControlChannel
+class TcpClient;
+
+class ITransportClient
 {
     public:
-                ControlChannel(ITransportClient *transport, IChannelFactory *factory, int features);
-        virtual ~ControlChannel(void);
+                ITransportClient(void);
+        virtual ~ITransportClient(void);
 
-		boost::unique_future<HeliosTv::Stream*> newStream(std::string &uri, int token);
+	virtual	boost::unique_future<int> connect() = 0;
 
-		boost::unique_future<int> connect();
+	virtual std::size_t read(boost::asio::mutable_buffers_1 buffer) = 0;
 
-		boost::unique_future<int> write();
+	virtual std::size_t write(boost::asio::mutable_buffers_1 buffer) = 0;
 
-		boost::unique_future<int> read();
-
-    private:
-		ITransportClient *transport;
-		IChannelFactory *factory;
-		int features;
-
+	virtual boost::asio::ip::tcp::socket* get_socket() = 0;
 };
 
 } // namespace
 
 
-#endif /* __CONTROLCHANNEL_H */
+#endif /* __ITRANSPORTCLIENT_H */
 

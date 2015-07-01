@@ -1,0 +1,1 @@
+g++ -shared -fPIC -ldl -o libheliostv1.so libheliostv_la-ControlChannel.o libheliostv_la-DataChannel.o libheliostv_la-IChannelFactory.o libheliostv_la-ITransportClient.o libheliostv_la-Stream.o libheliostv_la-TcpChannelFactory.o
