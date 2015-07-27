@@ -76,7 +76,10 @@ public:
 typedef struct {
      const char *channel, *pids;
      int frequency;
-     GstElement *pipeline, *dvbsrc, *tee, *multisocketsink[6];
+     GstElement *pipeline, *dvbsrc, *tee, *mpegtspidfilter[6], *queue[6], *multisocketsink[6], *fakesink[6];
+     GstPadTemplate *tee_src_pad_template;
+     GstPad *tee_pad[6], *queue_pad[6];
+     gulong id_tee[6];
 } _CustomData;
 /***********************************************************************************/
 
@@ -322,19 +325,32 @@ int channel (const char *channels, _CustomData *data)
 
 
 
+/***********************************************************************************/
+static GstPadProbeReturn pad_probe_cb (GstPad *pad, GstPadProbeInfo *info, gpointer user_data)
+{
+  return GST_PAD_PROBE_OK;
+}
+/***********************************************************************************/
+
+
+
 /************************************* pipeline ************************************/
 int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 {
-  g_print ("mpegtspidfilter\n");
-
-  GMainLoop *loop;
-
   GError **err;
+
+  GstElement *temp;
 
   g_print ("fd = %d\n",fd_socket);
 
-  int i = 0;
+  int i = 0, j = 0;
   bool end = false;
+  char name_mpegtspidfilter[30] = "", name_multisocketsink[30] = "", name_tee[30] = "";
+  strcat(name_mpegtspidfilter, "mpegtspidfilter_");
+  strcat(name_mpegtspidfilter, chaine);
+  strcat(name_multisocketsink, "multisocketsink_");
+  strcat(name_multisocketsink, chaine);
+  strcat(name_tee, "src_");
 
   channel_list *list;
   list = channel_list::Instantiate();
@@ -343,17 +359,18 @@ int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 
   static _CustomData *data = NULL;
 
+  /*if (data != NULL)
+  {
+    for(j=0;j<4;j++)
+      data->id_tee[j] = gst_pad_add_probe (data->tee_pad[j], GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM, pad_probe_cb, NULL, NULL);
+  }*/
+
+
   if (data == NULL)
     { 
-    GstPadTemplate *tee_src_pad_template;
-    GstPad *tee_channel_pad, *mpegtspidfilter_channel_pad;
-
     data = (_CustomData*)malloc(sizeof(_CustomData));
 
     int Test=0;
-
-    /* Initialisation */
-    loop = g_main_loop_new (NULL, FALSE);
 
     /* set the channel */
     Test=channel(chaine, data);
@@ -386,6 +403,7 @@ int pipeline (const char *chaine, const char *host, int port, int fd_socket)
     g_object_set (G_OBJECT (data->dvbsrc), "guard", 1, NULL);
     g_object_set (G_OBJECT (data->dvbsrc), "hierarchy", 1, NULL);
 
+    //g_object_set (G_OBJECT (data->tee), "allow-not-linked", TRUE, NULL);
 
     /* we add all elements into the pipeline */
     gst_bin_add_many (GST_BIN (data->pipeline), data->dvbsrc, data->tee, NULL);
@@ -396,8 +414,33 @@ int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 
     /* we link the elements together */
     gst_element_link (data->dvbsrc, data->tee);
+
+    data->tee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data->tee), "src_%u");
+
+    for(j=0;j<4;j++)
+    {
+      data->tee_pad[j] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
+
+      data->id_tee[j] = gst_pad_add_probe (data->tee_pad[j], GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM, pad_probe_cb, NULL, NULL);
+
+      char name_queue[30] = "", name_fakesink[30];
+      sprintf(name_queue, "queue_%d", j);
+      data->queue[j] = gst_element_factory_make ("queue", name_queue);
+      sprintf(name_fakesink, "fakesink_%d", j);
+      data->fakesink[j] = gst_element_factory_make ("fakesink", name_fakesink);
+
+      g_object_set (G_OBJECT (data->fakesink[j]), "sync", FALSE, NULL);
+
+      gst_bin_add_many (GST_BIN (data->pipeline), data->queue[j], data->fakesink[j], NULL);
+
+      gst_element_link (data->queue[j], data->fakesink[j]);
+
+      data->queue_pad[j] = gst_element_get_static_pad (data->queue[j], "sink");
+      gst_pad_link (data->tee_pad[j], data->queue_pad[j]);
+    }
   }
 
+  /* Create filtering part */
   if (!list->is_present(atoi(chaine)))
   {
     int Test;
@@ -407,9 +450,8 @@ int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 
     while (i<=6 && !end)
     {
-      GstElement *mpegtspidfilter[6];
-      GstPadTemplate *tee_src_pad_template[6];
-      GstPad *tee_channel_pad[6], *mpegtspidfilter_channel_pad[6];
+      GstPad *mpegtspidfilter_pad[6];
+      gulong id;
 
       g_print ("size : %d\n", list->get_size());
 
@@ -418,25 +460,21 @@ int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 	list->add(atoi(chaine));
 
 	/* Create gstreamer elements */
-	char name_mpegtspidfilter[20], name_multisocketsink[20];
-	sprintf(name_mpegtspidfilter, "mpegtspidfilter_%d", i);
-	sprintf(name_multisocketsink, "multisocketsink_%d", i);
-	mpegtspidfilter[i] = gst_element_factory_make ("mpegtspidfilter", name_mpegtspidfilter);
+	data->mpegtspidfilter[i] = gst_element_factory_make ("mpegtspidfilter", name_mpegtspidfilter);
 	data->multisocketsink[i] = gst_element_factory_make ("multisocketsink", name_multisocketsink);
 
  
 	/* check creation */
-	if (!mpegtspidfilter[i] || !data->multisocketsink[i])
+	if (!data->mpegtspidfilter[i] || !data->multisocketsink[i])
 	{
 	  g_print ("One element could not be created-> Exiting->\n");
 	  return -1;
 	}
 
 	/* Set up the pipeline */
-	g_print ("Elements are created\n");
 
 	/* set the properties of mpegtspidfilter */
-	g_object_set (G_OBJECT (mpegtspidfilter[i]), "pids", data->pids, NULL);
+	g_object_set (G_OBJECT (data->mpegtspidfilter[i]), "pids", data->pids, NULL);
 	g_print ("pids : %s\n", data->pids);
 
 	/* set the properties of multisocketsink */
@@ -444,55 +482,53 @@ int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 	     "unit-format", GST_FORMAT_TIME,
 	     "units-max", (gint64) 7 * GST_SECOND,
 	     "units-soft-max", (gint64) 3 * GST_SECOND,
-	     "recover-policy", 3 /* keyframe */ ,
+	     "recover-policy", 3,
 	     "timeout", (guint64) 10 * GST_SECOND,
-	     "sync-method", 1 /* next-keyframe */ ,
-	     NULL); 
+ 	     "sync-method", 1,
+	     NULL);
 
 	/* we add all elements into the pipeline */
-	gst_bin_add_many (GST_BIN (data->pipeline), mpegtspidfilter[i], data->multisocketsink[i], NULL);
+	gst_bin_add_many (GST_BIN (data->pipeline), data->mpegtspidfilter[i], data->multisocketsink[i], NULL);
 
-	g_print ("Added all the Elements into the pipeline\n");
+	gst_element_sync_state_with_parent(data->queue[i]);
+	gst_element_sync_state_with_parent(data->mpegtspidfilter[i]);
+	gst_element_sync_state_with_parent(data->multisocketsink[i]);
 
-	/* we link the elements together */
-	gst_element_link (mpegtspidfilter[i], data->multisocketsink[i]);
+        GeneratePipelineDot(data->pipeline); //Debug
 
-	/* Manually link the Tee, which has "Request" pads */
-	/*tee_src_pad_template[i] = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data->tee), "src_%u");
-	tee_channel_pad[i] = gst_element_request_pad (data->tee, tee_src_pad_template[i], "src_%u", NULL);
-	mpegtspidfilter_channel_pad[i] = gst_element_get_static_pad (mpegtspidfilter[i], "sink");
-	gst_pad_link (tee_channel_pad[i], mpegtspidfilter_channel_pad[i]);
-	gst_object_unref (mpegtspidfilter_channel_pad[i]);
-*/
- 	g_signal_connect (data->tee, "pad-added", G_CALLBACK(on_pad_added), mpegtspidfilter[i]);
+        gst_element_unlink (data->queue[i], data->fakesink[i]);
+        gst_bin_remove (GST_BIN (data->pipeline), data->fakesink[i]);
 
-	tee_src_pad_template[i] = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data->tee), "src_%u");
-	tee_channel_pad[i] = gst_element_request_pad (data->tee, tee_src_pad_template[i], "src_%u", NULL);
+	gst_element_link_many (data->queue[i], data->mpegtspidfilter[i], data->multisocketsink[i], NULL);
 
-	g_print ("Linked all the Elements together\n");
+	g_print ("Create a pipeline with %s\n", gst_element_get_name(data->mpegtspidfilter[i]));
+
+	gst_pad_remove_probe (data->tee_pad[i], data->id_tee[i]);
 
 	end = true;
       }
       i++;
     }
   }
-  else
-  {
-    g_signal_emit_by_name (data->multisocketsink[0], "add", socket);
-  }
-
 
   /* Set the pipeline to "playing" state*/
   g_print ("Playing the video\n");
+
   gst_element_set_state (data->pipeline, GST_STATE_PLAYING);
-
-  GeneratePipelineDot(data->pipeline); //Debug
-
-  g_print ("i = %d\n", i);
-  g_signal_emit_by_name (data->multisocketsink[i-1], "add", socket);
 
   /* Iterate */
   g_print ("Running...\n");
+
+ for (i=0;i<list->get_size();i++)
+  {
+    if(!strcmp(name_mpegtspidfilter, gst_element_get_name(data->mpegtspidfilter[i])))
+    {
+      g_signal_emit_by_name (data->multisocketsink[i], "add", socket);
+      g_print ("add socket to %s\n", gst_element_get_name(data->multisocketsink[i]));
+    }
+  }
+
+  sleep(3);
 
   GeneratePipelineDot(data->pipeline); //Debug
 
@@ -505,7 +541,6 @@ int pipeline (const char *chaine, const char *host, int port, int fd_socket)
 
   /* Out of the main loop, clean up nicely */
   g_print ("Returned, stopping playback\n");
-  gst_element_set_state (data->pipeline, GST_STATE_NULL);
 
   g_print ("Deleting pipeline\n");
   gst_object_unref (GST_OBJECT (data->pipeline));
