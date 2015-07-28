@@ -10,6 +10,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <fstream>
 #include <boost/bind.hpp>
 #include <boost/smart_ptr.hpp>
 #include <boost/asio.hpp>
@@ -22,6 +23,8 @@
 
 
 using boost::asio::ip::tcp;
+
+
 
 
 /***********************************************************************************/
@@ -53,7 +56,7 @@ public:
       { 
         for (int i = 0; i<token.size() ;i++) 
         {
-           std::cout << token[i] << " ";
+           std::cout << token[i] << " " << std::endl;
         }
       }
 
@@ -90,6 +93,110 @@ public:
         token.erase(token.begin(),token.end());
       }
 };
+/***********************************************************************************/
+
+
+
+
+/***********************************************************************************/
+/********************************* Select Channel **********************************/
+const char* get_channel (int channel)
+{
+   if (channel == 1) return "TF1";
+   else if (channel == 2) return "France 2";
+   else if (channel == 3) return "France 3";
+   else if (channel == 4) return "Canal+";
+   else if (channel == 5) return "France 5";
+   else if (channel == 6) return "M6";
+   else if (channel == 7) return "ARTE";
+   else if (channel == 8) return "D8";
+   else if (channel == 9) return "W9";
+   else if (channel == 10) return "TMC";
+   else if (channel == 11) return "NT1";
+   else if (channel == 12) return "NRJ12";
+   else if (channel == 13) return "LCP";
+   else if (channel == 14) return "France 4";
+   else if (channel == 15) return "BFM TV";
+   else if (channel == 16) return "i>TELE";
+   else if (channel == 17) return "D17";
+   else if (channel == 18) return "Gulli";
+   else if (channel == 19) return "France Ô";
+   else if (channel == 20) return "HD1";
+   else if (channel == 21) return "L'Equipe 21";
+   else if (channel == 22) return "6ter";
+   else if (channel == 23) return "NUMERO 23";
+   else if (channel == 24) return "RMC";
+   else if (channel == 25) return "CHERIE25";
+   else if (channel == 32) return "IDF1";
+   else if (channel == 33) return "France 24";
+   else if (channel == 34) return "BFM Business Paris";
+   else if (channel == 41) return "PARIS PREMIERE";
+   else if (channel == 42) return "CANAL+ SPORT";
+   else if (channel == 43) return "CANAL+ CINEMA";
+   else if (channel == 45) return "PLANETE+";
+   else if (channel == 48) return "LCI";
+   else if (channel == 51) return "TF1 HD";
+   else if (channel == 52) return "France 2 HD";
+   else if (channel == 56) return "M6HD";
+   else if (channel == 57) return "ARTE HD";
+   else return "";
+}
+/***********************************************************************************/
+
+
+
+
+/***********************************************************************************/
+/*********************************** get_info() ************************************/
+char* get_info(int channel_number)
+{
+  char *info = (char*) malloc(60 * sizeof(char));
+  strcpy(info, "");
+
+  std::ifstream channels;
+  channels.open("/home/sah0260/Documents/heliostv/src/Channels.conf");
+  char channel_str[1000] = "";
+  if (channels.is_open())
+  {
+    while (!channels.eof())
+    {
+      channels >> channel_str;
+      char *temp;
+      temp = strtok (channel_str, ":");
+
+      while (temp != NULL)
+      {
+        if (!strcmp(get_channel(channel_number), temp))
+        {
+	  strcat(info, temp);
+          strcat(info, ":");
+          temp = strtok (NULL, ":");
+          strcat(info, temp);
+          strcat(info, ":");
+
+          int i = 0;
+	  for (i=0;i<9;i++)
+	  {
+            temp = strtok (NULL, ":");
+	  }
+
+          while (temp != NULL)
+	  {
+	    strcat(info, temp);
+            temp = strtok (NULL, ":");
+	    strcat(info, ",");
+          }
+
+        }
+        temp = strtok (NULL, ":");
+      }
+
+    }
+  }
+  channels.close();
+
+  return info;
+}
 /***********************************************************************************/
 
 
@@ -136,7 +243,6 @@ private:
       int client_n = 0;
       int test = std::get<0>(dst);
 
-      std::cout << "fd : " << fd << std::endl;
       fd = socket_.native_handle();
       std::cout << "fd : " << fd << std::endl;
 
@@ -156,12 +262,10 @@ private:
       msgpack::type::tuple<int, std::string> pack(client_n, answer);
       msgpack::pack(sbuf, pack);
 
-      std::cout << "\nSending data : " << sbuf.size() << std::endl;
       boost::asio::async_write(socket_,
           boost::asio::buffer(sbuf.data(), sbuf.size()),
           boost::bind(&session_control::handle_write, this,
             boost::asio::placeholders::error));
-      std::cout << "Sent : " << fd << std::endl;
       std::cout << std::endl;
     }
     else
@@ -193,6 +297,9 @@ private:
   char data_[max_length];
 };
 /***********************************************************************************/
+
+
+
 
 /***********************************************************************************/
 /****************************** class server control *******************************/
@@ -281,7 +388,6 @@ private:
       char answer[6] = "NOK";
       int test = std::get<0>(dst);
 
-      std::cout << "\nfd : " << fd << std::endl;
       fd = socket_.native_handle();
       std::cout << "fd : " << fd << std::endl;
 
@@ -289,13 +395,17 @@ private:
       {
         strcpy(answer, "OK");
 
+	char* info;
+	info = get_info(atoi(std::get<2>(dst).c_str()));
+        std::cout << "info : " << info << std::endl;
+
         msgpack::type::tuple<std::string> pack(answer);
         msgpack::pack(sbuf, pack);
         boost::asio::async_write(socket_,
             boost::asio::buffer(sbuf.data(), sbuf.size()),
             boost::bind(&session_streaming::handle_write, this,
               boost::asio::placeholders::error));
-        pipeline(std::get<2>(dst).c_str(), "localhost", port_, fd);
+        pipeline(info, "localhost", port_, fd);
       }
       else
       {
@@ -338,6 +448,9 @@ private:
   short port_;
 };
 /***********************************************************************************/
+
+
+
 
 /***********************************************************************************/
 /***************************** class server streaming ******************************/
