@@ -53,16 +53,16 @@ public:
 
 
    void get()
-      { 
-        for (int i = 0; i<token.size() ;i++) 
+      {
+        for (int i = 0; i<token.size() ;i++)
         {
            std::cout << token[i] << " " << std::endl;
         }
       }
 
    bool is_present(int data)
-      { 
-        for (int i = 0; i<token.size() ;i++) 
+      {
+        for (int i = 0; i<token.size() ;i++)
         {
           if (data == token[i])
           {
@@ -72,14 +72,14 @@ public:
         return FALSE;
       }
 
-   void add (int data) 
-      { 
+   void add (int data)
+      {
         token.push_back(data);
       }
 
-   void remove (int data) 
-      { 
-        for (int i = 0; i<token.size() ;i++) 
+   void remove (int data)
+      {
+        for (int i = 0; i<token.size() ;i++)
         {
           if (data == token[i])
           {
@@ -88,8 +88,8 @@ public:
         }
       }
 
-   void remove_all () 
-      { 
+   void remove_all ()
+      {
         token.erase(token.begin(),token.end());
       }
 };
@@ -154,7 +154,7 @@ char* get_info(int channel_number)
   strcpy(info, "");
 
   std::ifstream channels;
-  channels.open("/home/sah0260/Documents/heliostv/src/Channels.conf");
+  channels.open("~/Channels.conf");
   char channel_str[1000] = "";
   if (channels.is_open())
   {
@@ -321,7 +321,7 @@ private:
         boost::bind(&server_control::handle_accept, this, new_session_control,
           boost::asio::placeholders::error));
   }
- 
+
   void handle_accept(session_control* new_session_control,
       const boost::system::error_code& error)
   {
@@ -462,7 +462,7 @@ public:
     : io_service_(io_service),
       acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
       port_(port)
-  { 
+  {
     start_accept();
   }
 
@@ -474,7 +474,7 @@ private:
         boost::bind(&server_streaming::handle_accept, this, new_session_streaming,
           boost::asio::placeholders::error));
   }
- 
+
   void handle_accept(session_streaming* new_session_streaming,
       const boost::system::error_code& error)
   {
@@ -504,7 +504,7 @@ private:
 int main(int argc, char* argv[])
 {
   gst_init (&argc, &argv);
-  
+
   try
   {
     if (argc != 3)
