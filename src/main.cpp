@@ -410,7 +410,7 @@ private:
       else
       {
         msgpack::type::tuple<std::string> pack(answer);
-        msgpack::pack(sbuf, answer);
+        msgpack::pack(sbuf, pack);
         boost::asio::async_write(socket_,
             boost::asio::buffer(sbuf.data(), bytes_transferred),
             boost::bind(&session_streaming::handle_write, this,
