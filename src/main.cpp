@@ -409,6 +409,7 @@ private:
       }
       else
       {
+        msgpack::type::tuple<std::string> pack(answer);
         msgpack::pack(sbuf, answer);
         boost::asio::async_write(socket_,
             boost::asio::buffer(sbuf.data(), bytes_transferred),
