@@ -241,7 +241,7 @@ private:
 
       char answer[10] = "NOK";
       int client_n = 0;
-      int test = std::get<0>(dst);
+      int test = dst.get<0>();
 
       fd = socket_.native_handle();
       std::cout << "fd : " << fd << std::endl;
@@ -386,17 +386,17 @@ private:
       msg.get().convert(&dst);
 
       char answer[6] = "NOK";
-      int test = std::get<0>(dst);
+      int test = dst.get<0>();
 
       fd = socket_.native_handle();
       std::cout << "fd : " << fd << std::endl;
 
-      if (test==1 && new_list->is_present(std::get<1>(dst)))
+      if (test==1 && new_list->is_present(dst.get<1>()))
       {
         strcpy(answer, "OK");
 
 	char* info;
-	info = get_info(atoi(std::get<2>(dst).c_str()));
+	info = get_info(atoi(dst.get<2>().c_str()));
         std::cout << "info : " << info << std::endl;
 
         msgpack::type::tuple<std::string> pack(answer);
