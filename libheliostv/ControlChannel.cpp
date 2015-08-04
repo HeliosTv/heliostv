@@ -108,7 +108,7 @@ boost::unique_future<int> ControlChannel::read()
 	msgpack::unpack(&msg_control, reply_control, reply_length_control);
 	msg_control.get().convert(&rep_control);
 
-	ident = std::get<0>(rep_control);
+	ident = rep_control.get<0>();
 
 	promise.set_value(ident);
 
