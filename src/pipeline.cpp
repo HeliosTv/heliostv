@@ -236,28 +236,6 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
     gst_element_link (data->dvbsrc, data->tee);
 
     data->tee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data->tee), "src_%u");
-
-    for(j=0;j<4;j++)
-    {
-      data->tee_pad[j] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
-
-      data->id_tee[j] = gst_pad_add_probe (data->tee_pad[j], GST_PAD_PROBE_TYPE_BLOCK_DOWNSTREAM, pad_probe_cb, NULL, NULL);
-
-      char name_queue[30] = "", name_fakesink[30];
-      sprintf(name_queue, "queue_%d", j);
-      data->queue[j] = gst_element_factory_make ("queue", name_queue);
-      sprintf(name_fakesink, "fakesink_%d", j);
-      data->fakesink[j] = gst_element_factory_make ("fakesink", name_fakesink);
-
-      g_object_set (G_OBJECT (data->fakesink[j]), "sync", FALSE, NULL);
-
-      gst_bin_add_many (GST_BIN (data->pipeline), data->queue[j], data->fakesink[j], NULL);
-
-      gst_element_link (data->queue[j], data->fakesink[j]);
-
-      data->queue_pad[j] = gst_element_get_static_pad (data->queue[j], "sink");
-      gst_pad_link (data->tee_pad[j], data->queue_pad[j]);
-    }
   }
 
   /* Create filtering part */
@@ -270,21 +248,15 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
 
       if (list->get_size() == i)
       {
-	list->add(chaine);
+	char *current;
+	current = strdup(chaine);
+	list->add(current);
+
+        data->tee_pad[i] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
 
 	/* Create gstreamer elements */
 	data->mpegtspidfilter[i] = gst_element_factory_make ("mpegtspidfilter", name_mpegtspidfilter);
 	data->multisocketsink[i] = gst_element_factory_make ("multisocketsink", name_multisocketsink);
-
- 
-	/* check creation */
-	if (!data->mpegtspidfilter[i] || !data->multisocketsink[i])
-	{
-	  g_print ("One element could not be created-> Exiting->\n");
-	  return -1;
-	}
-
-	/* Set up the pipeline */
 
 	/* set the properties of mpegtspidfilter */
 	g_object_set (G_OBJECT (data->mpegtspidfilter[i]), "pids", pids, NULL);
@@ -298,26 +270,24 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
 	     "recover-policy", 3,
 	     "timeout", (guint64) 10 * GST_SECOND,
  	     "sync-method", 1,
+	     "async", FALSE,
 	     NULL);
 
 	/* we add all elements into the pipeline */
 	gst_bin_add_many (GST_BIN (data->pipeline), data->mpegtspidfilter[i], data->multisocketsink[i], NULL);
 
-	gst_element_sync_state_with_parent(data->queue[i]);
-	gst_element_sync_state_with_parent(data->mpegtspidfilter[i]);
-	gst_element_sync_state_with_parent(data->multisocketsink[i]);
+	gst_element_link_many (data->mpegtspidfilter[i], data->multisocketsink[i], NULL);
+
+	gst_element_sync_state_with_parent (data->mpegtspidfilter[i]);
+	gst_element_sync_state_with_parent (data->multisocketsink[i]);
 
         GeneratePipelineDot(data->pipeline); //Debug
 
-        gst_element_unlink (data->queue[i], data->fakesink[i]);
-        gst_bin_remove (GST_BIN (data->pipeline), data->fakesink[i]);
-
-	gst_element_link_many (data->queue[i], data->mpegtspidfilter[i], data->multisocketsink[i], NULL);
+	GstPad *sinkpad = gst_element_get_static_pad (data->mpegtspidfilter[i], "sink");
+	gst_pad_link (data->tee_pad[i], sinkpad);
+	gst_object_unref (sinkpad);
 
 	g_print ("Create a pipeline with %s\n", gst_element_get_name(data->mpegtspidfilter[i]));
-
-    for(j=0;j<4;j++)
-	gst_pad_remove_probe (data->tee_pad[j], data->id_tee[j]);
 
 	end = true;
       }
@@ -367,4 +337,3 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
   return 0;
 } 
 /***********************************************************************************/
-
