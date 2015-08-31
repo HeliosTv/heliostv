@@ -154,7 +154,7 @@ char* get_info(int channel_number)
   strcpy(info, "");
 
   std::ifstream channels;
-  channels.open("~/Channels.conf");
+  channels.open("/home/sah0260/Documents/heliostv/src/Channels.conf");
   char channel_str[1000] = "";
   if (channels.is_open())
   {
@@ -255,12 +255,11 @@ private:
           client_n = rand()%1000000+1;
         }
         new_list->add(client_n);
+        new_list->get();
+
+        msgpack::type::tuple<int, std::string> pack(client_n, answer);
+        msgpack::pack(sbuf, pack);
       }
-
-      new_list->get();
-
-      msgpack::type::tuple<int, std::string> pack(client_n, answer);
-      msgpack::pack(sbuf, pack);
 
       boost::asio::async_write(socket_,
           boost::asio::buffer(sbuf.data(), sbuf.size()),
@@ -405,7 +404,7 @@ private:
             boost::asio::buffer(sbuf.data(), sbuf.size()),
             boost::bind(&session_streaming::handle_write, this,
               boost::asio::placeholders::error));
-        pipeline(info, "localhost", port_, fd);
+        pipeline(info, "10.190.9.187", port_, fd);
       }
       else
       {

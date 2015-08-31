@@ -74,10 +74,9 @@ public:
 /***********************************************************************************/
 /******************************* Def Struct Pipeline *******************************/
 typedef struct {
-     GstElement *pipeline, *dvbsrc, *tee, *mpegtspidfilter[6], *queue[6], *multisocketsink[6], *fakesink[6];
+     GstElement *pipeline, *dvbsrc, *tee, *mpegtspidfilter[6], *queue[6], *multisocketsink[6];
      GstPadTemplate *tee_src_pad_template;
-     GstPad *tee_pad[6], *queue_pad[6];
-     gulong id_tee[6];
+     GstPad *tee_pad[6];
 } _CustomData;
 /***********************************************************************************/
 
@@ -125,15 +124,6 @@ static void on_pad_added (GstElement *element, GstPad *pad, gpointer data)
 
 
 /***********************************************************************************/
-static GstPadProbeReturn pad_probe_cb (GstPad *pad, GstPadProbeInfo *info, gpointer user_data)
-{
-  return GST_PAD_PROBE_OK;
-}
-/***********************************************************************************/
-
-
-
-/***********************************************************************************/
 int info_parse (char *info, char *chaine, int frequency, char *pids)
 {
   char *temp;
@@ -165,7 +155,8 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
 
   int i = 0, j = 0;
   bool end = false;
-  char name_mpegtspidfilter[30] = "", name_multisocketsink[30] = "", name_tee[30] = "";
+  char name_mpegtspidfilter[30] = "", name_multisocketsink[30] = "";
+
 
   int frequency;
   char chaine[30] = "", pids[30] = "";
@@ -184,7 +175,6 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
   strcat(name_mpegtspidfilter, chaine);
   strcat(name_multisocketsink, "multisocketsink_");
   strcat(name_multisocketsink, chaine);
-  strcat(name_tee, "src_");
 
   channel_list *list;
   list = channel_list::Instantiate();
@@ -223,19 +213,17 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
     g_object_set (G_OBJECT (data->dvbsrc), "guard", 1, NULL);
     g_object_set (G_OBJECT (data->dvbsrc), "hierarchy", 1, NULL);
 
-    //g_object_set (G_OBJECT (data->tee), "allow-not-linked", TRUE, NULL);
-
     /* we add all elements into the pipeline */
     gst_bin_add_many (GST_BIN (data->pipeline), data->dvbsrc, data->tee, NULL);
 
-    GeneratePipelineDot(data->pipeline); //Debug
-
     g_print ("Added all the Elements into the pipeline\n");
 
-    /* we link the elements together */
     gst_element_link (data->dvbsrc, data->tee);
 
     data->tee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data->tee), "src_%u");
+
+    for(j=0;j<6;j++)
+    data->tee_pad[j] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
   }
 
   /* Create filtering part */
@@ -243,7 +231,6 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
   {
     while (i<=6 && !end)
     {
-      GstPad *mpegtspidfilter_pad[6];
       gulong id;
 
       if (list->get_size() == i)
@@ -252,7 +239,7 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
 	current = strdup(chaine);
 	list->add(current);
 
-        data->tee_pad[i] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
+        //data->tee_pad[i] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
 
 	/* Create gstreamer elements */
 	data->mpegtspidfilter[i] = gst_element_factory_make ("mpegtspidfilter", name_mpegtspidfilter);
@@ -270,11 +257,12 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
 	     "recover-policy", 3,
 	     "timeout", (guint64) 10 * GST_SECOND,
  	     "sync-method", 1,
+	     "sync", FALSE,
 	     "async", FALSE,
 	     NULL);
 
 	/* we add all elements into the pipeline */
-	gst_bin_add_many (GST_BIN (data->pipeline), data->mpegtspidfilter[i], data->multisocketsink[i], NULL);
+	gst_bin_add_many (GST_BIN (data->pipeline), (GstElement *) gst_object_ref (data->mpegtspidfilter[i]), (GstElement *) gst_object_ref (data->multisocketsink[i]), NULL);
 
 	gst_element_link_many (data->mpegtspidfilter[i], data->multisocketsink[i], NULL);
 
