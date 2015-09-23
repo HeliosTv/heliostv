@@ -154,7 +154,9 @@ char* get_info(int channel_number)
   strcpy(info, "");
 
   std::ifstream channels;
-  channels.open("/home/sah0260/Documents/heliostv/src/Channels.conf");
+  std::string channels_path(getenv("HOME"));
+  channels_path += "/Channels.conf";
+  channels.open(channels_path.c_str());
   char channel_str[1000] = "";
   if (channels.is_open())
   {
