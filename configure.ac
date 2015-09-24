@@ -7,6 +7,7 @@ AM_INIT_AUTOMAKE([-Wall foreign])
 
 GST_REQUIRED=1.0.0
 
+AM_PROG_AR
 LT_PREREQ([2.2])
 LT_INIT()
 
@@ -17,7 +18,6 @@ AC_CONFIG_HEADERS([config.h])
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC
-AM_PROG_AR
 AX_CXX_COMPILE_STDCXX_11()
 AX_BOOST_BASE([1.48],, [AC_MSG_ERROR([HeliosTv needs Boost, but it was not found in your system])])
 AX_BOOST_SYSTEM
