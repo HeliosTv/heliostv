@@ -21,9 +21,12 @@
 
 namespace HeliosTv {
 
+#define DEFAULT_CONTROL_PORT    31105
+#define DEFAULT_STREAM_PORT     31106
+
 TcpChannelFactory::TcpChannelFactory(void) : host("localhost"),
-					     port_control(6005),
-					     port_stream(6006)
+					     port_control(DEFAULT_CONTROL_PORT),
+					     port_stream(DEFAULT_STREAM_PORT)
 {
 }
 
