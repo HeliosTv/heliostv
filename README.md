@@ -20,6 +20,20 @@ Run the following command to build the server:
 
 ## Getting Started
 
+> Important : You need to install the HeliosTv GStreamer plugins to start the
+> daemon
+
+Start the daemon:
+
+    heliostv 31105 31106
+
+You can then start a client. A sample client using gst-launch is available in
+the example directory :
+
+    ./example/heliostv-play 1
+
+Where 1 is the channel number to play.
+
 ## Getting Into
 
 One of the aim of HeliosTv is to be able to use it in clients written in any
