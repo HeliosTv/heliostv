@@ -1,25 +1,30 @@
 #ifndef __TCPCHANNELFACTORY_H
 #define __TCPCHANNELFACTORY_H
-
 /*
 *****************************************************************************
-*                 Copyright (c) 2015 SoftAtHome
+* HeliosTv
+* Copyright (C) 2015  SoftAtHome
 *
-*     The computer program contained herein contains proprietary
-*     information which is the property of SoftAtHome.  The program
-*     may be used and/or copied only with the written permission of
-*     SoftAtHome or in accordance with the terms and conditions
-*     stipulated in the agreement/contract under which the programs
-*     have been supplied.
-*****************************************************************************/
-/**
-* @file     TcpChannelFactory.h
-* @author   R. Picard
-* @date     13/05/2015
+* Authors:
+*   Romain Picard <romain dot picard at softathome dot com>
+*   Fabien Felio  <fabien dot felio at softathome dot com>
 *
+* This library is free software; you can redistribute it and/or
+* modify it under the terms of the GNU Library General Public
+* License as published by the Free Software Foundation; either
+* version 2 of the License, or (at your option) any later version.
+*
+* This library is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+* Library General Public License for more details.
+*
+* You should have received a copy of the GNU Library General Public
+* License along with this library; if not, write to the
+* Free Software Foundation, Inc., 51 Franklin St, Fifth Floor,
+* Boston, MA 02110-1301, USA.
 ******************************************************************************
 */
-
 #include "ControlChannel.h"
 #include "TcpClient.h"
 #include "IChannelFactory.h"
@@ -30,22 +35,22 @@ namespace HeliosTv {
 class TcpChannelFactory: public IChannelFactory
 {
     public:
-                TcpChannelFactory(void);
-        virtual ~TcpChannelFactory(void);
+                                    TcpChannelFactory(void);
+        virtual                     ~TcpChannelFactory(void);
 
-		ControlChannel* newControlChannel(int features);
-		boost::unique_future<HeliosTv::Stream*> newStreamChannel(std::string &uri, int token);
+                ControlChannel*     newControlChannel(int features);
+                boost::unique_future<HeliosTv::Stream*> newStreamChannel(std::string &uri, int token);
 
-		void setHost(std::string &host);
-		void setControlPort(int port);
-		void setDataPort(int port);
+                void                setHost(std::string &host);
+                void                setControlPort(int port);
+                void                setDataPort(int port);
 
-		static TcpChannelFactory* Instantiate(void);
+        static  TcpChannelFactory*  Instantiate(void);
 
     private:
-		std::string host;
-		int port_control;
-		int port_stream;
+        std::string host;
+        int port_control;
+        int port_stream;
 };
 
 } // namespace
