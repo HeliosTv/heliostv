@@ -93,111 +93,63 @@ public:
         token.erase(token.begin(),token.end());
       }
 };
-/***********************************************************************************/
-
-
-
-
-/***********************************************************************************/
-/********************************* Select Channel **********************************/
-const char* get_channel (int channel)
-{
-   if (channel == 1) return "TF1";
-   else if (channel == 2) return "France 2";
-   else if (channel == 3) return "France 3";
-   else if (channel == 4) return "Canal+";
-   else if (channel == 5) return "France 5";
-   else if (channel == 6) return "M6";
-   else if (channel == 7) return "ARTE";
-   else if (channel == 8) return "D8";
-   else if (channel == 9) return "W9";
-   else if (channel == 10) return "TMC";
-   else if (channel == 11) return "NT1";
-   else if (channel == 12) return "NRJ12";
-   else if (channel == 13) return "LCP";
-   else if (channel == 14) return "France 4";
-   else if (channel == 15) return "BFM TV";
-   else if (channel == 16) return "i>TELE";
-   else if (channel == 17) return "D17";
-   else if (channel == 18) return "Gulli";
-   else if (channel == 19) return "France Ô";
-   else if (channel == 20) return "HD1";
-   else if (channel == 21) return "L'Equipe 21";
-   else if (channel == 22) return "6ter";
-   else if (channel == 23) return "NUMERO 23";
-   else if (channel == 24) return "RMC";
-   else if (channel == 25) return "CHERIE25";
-   else if (channel == 32) return "IDF1";
-   else if (channel == 33) return "France 24";
-   else if (channel == 34) return "BFM Business Paris";
-   else if (channel == 41) return "PARIS PREMIERE";
-   else if (channel == 42) return "CANAL+ SPORT";
-   else if (channel == 43) return "CANAL+ CINEMA";
-   else if (channel == 45) return "PLANETE+";
-   else if (channel == 48) return "LCI";
-   else if (channel == 51) return "TF1 HD";
-   else if (channel == 52) return "France 2 HD";
-   else if (channel == 56) return "M6HD";
-   else if (channel == 57) return "ARTE HD";
-   else return "";
-}
-/***********************************************************************************/
 
 
 
 
 /***********************************************************************************/
 /*********************************** get_info() ************************************/
-char* get_info(int channel_number)
+char* get_info(std::string &channelName)
 {
-  char *info = (char*) malloc(60 * sizeof(char));
-  strcpy(info, "");
+    /// @todo : use code from dvbbasebin
+    char *info = (char*) malloc(60 * sizeof(char));
+    strcpy(info, "");
 
-  std::ifstream channels;
-  std::string channels_path(getenv("HOME"));
-  channels_path += "/Channels.conf";
-  channels.open(channels_path.c_str());
-  char channel_str[1000] = "";
-  if (channels.is_open())
-  {
-    while (!channels.eof())
+    std::ifstream channels;
+    std::string channels_path(getenv("HOME"));
+    channels_path += "/Channels.conf";
+    channels.open(channels_path.c_str());
+    char channel_str[1000] = "";
+    if (channels.is_open())
     {
-      channels >> channel_str;
-      char *temp;
-      temp = strtok (channel_str, ":");
-
-      while (temp != NULL)
-      {
-        if (!strcmp(get_channel(channel_number), temp))
+        while (!channels.eof())
         {
-	  strcat(info, temp);
-          strcat(info, ":");
-          temp = strtok (NULL, ":");
-          strcat(info, temp);
-          strcat(info, ":");
+            channels >> channel_str;
+            char *temp;
+            temp = strtok (channel_str, ":");
 
-          int i = 0;
-	  for (i=0;i<9;i++)
-	  {
-            temp = strtok (NULL, ":");
-	  }
+            while (temp != NULL)
+            {
+                if (!strcmp(channelName.c_str(), temp))
+                {
+                    strcat(info, temp);
+                    strcat(info, ":");
+                    temp = strtok (NULL, ":");
+                    strcat(info, temp);
+                    strcat(info, ":");
 
-          while (temp != NULL)
-	  {
-	    strcat(info, temp);
-            temp = strtok (NULL, ":");
-	    strcat(info, ",");
-          }
+                    int i = 0;
+                    for (i=0;i<9;i++)
+                    {
+                        temp = strtok (NULL, ":");
+                    }
+
+                    while (temp != NULL)
+                    {
+                        strcat(info, temp);
+                        temp = strtok (NULL, ":");
+                        strcat(info, ",");
+                    }
+
+                }
+                temp = strtok (NULL, ":");
+            }
 
         }
-        temp = strtok (NULL, ":");
-      }
-
     }
-  }
-  channels.close();
+    channels.close();
 
-  return info;
+    return info;
 }
 /***********************************************************************************/
 
@@ -396,7 +348,7 @@ private:
         strcpy(answer, "OK");
 
 	char* info;
-	info = get_info(atoi(dst.get<2>().c_str()));
+	info = get_info(dst.get<2>());
         std::cout << "info : " << info << std::endl;
 
         msgpack::type::tuple<std::string> pack(answer);
