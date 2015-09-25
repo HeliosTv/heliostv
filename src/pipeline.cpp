@@ -33,8 +33,8 @@ public:
       }
 
    bool is_present(const char* data)
-      { 
-        for (int i = 0; i<channel_number.size() ;i++) 
+      {
+        for (int i = 0; i<channel_number.size() ;i++)
         {
           if (!strcmp(data, channel_number[i]))
           {
@@ -44,14 +44,14 @@ public:
         return FALSE;
       }
 
-   void add (const char* data) 
-      { 
+   void add (const char* data)
+      {
         channel_number.push_back(data);
       }
 
-   void remove (const char* data) 
-      { 
-        for (int i = 0; i<channel_number.size() ;i++) 
+   void remove (const char* data)
+      {
+        for (int i = 0; i<channel_number.size() ;i++)
         {
           if (!strcmp(data, channel_number[i]))
           {
@@ -60,8 +60,8 @@ public:
         }
       }
 
-   int get_size () 
-      { 
+   int get_size ()
+      {
 	int size = channel_number.size();
 	return size;
       }
@@ -147,7 +147,7 @@ int info_parse (char *info, char *chaine, int frequency, char *pids)
 
 
 /************************************* pipeline ************************************/
-int pipeline (char *info, const char *host, int port, int fd_socket)
+int pipeline (char *info, int fd_socket)
 {
   GError **err;
 
@@ -184,7 +184,7 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
   static _CustomData *data = NULL;
 
   if (data == NULL)
-    { 
+    {
     data = (_CustomData*)malloc(sizeof(_CustomData));
 
     /* Create gstreamer elements */
@@ -192,7 +192,7 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
     data->dvbsrc = gst_element_factory_make ("dvbsrc", "dvbsrc");
     data->tee = gst_element_factory_make ("tee", "tee");
 
- 
+
     /* check creation */
     if (!data->pipeline || !data->dvbsrc || !data->tee)
     {
@@ -309,7 +309,7 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
   /*if ( no more client )
     free(data);*/
 
-  #if 0 
+  #if 0
   g_main_loop_run (loop);
 
 
@@ -323,5 +323,5 @@ int pipeline (char *info, const char *host, int port, int fd_socket)
   #endif
 
   return 0;
-} 
+}
 /***********************************************************************************/

@@ -351,9 +351,8 @@ private:
 class session_streaming
 {
 public:
-  session_streaming(boost::asio::io_service& io_service, short port)
+  session_streaming(boost::asio::io_service& io_service)
     : socket_(io_service),
-      port_(port),
       fd(0)
   {
   }
@@ -406,7 +405,7 @@ private:
             boost::asio::buffer(sbuf.data(), sbuf.size()),
             boost::bind(&session_streaming::handle_write, this,
               boost::asio::placeholders::error));
-        pipeline(info, "10.190.9.187", port_, fd);
+        pipeline(info, fd);
       }
       else
       {
@@ -447,7 +446,6 @@ private:
   int fd;
   enum { max_length = 1024 };
   char data_[max_length];
-  short port_;
 };
 /***********************************************************************************/
 
@@ -470,7 +468,7 @@ public:
 private:
   void start_accept()
   {
-    session_streaming* new_session_streaming = new session_streaming(io_service_, this->port_);
+    session_streaming* new_session_streaming = new session_streaming(io_service_);
     acceptor_.async_accept(new_session_streaming->socket(),
         boost::bind(&server_streaming::handle_accept, this, new_session_streaming,
           boost::asio::placeholders::error));
