@@ -217,15 +217,10 @@ int pipeline (char *info, int fd_socket)
 
         /* we add all elements into the pipeline */
         gst_bin_add_many (GST_BIN (data->pipeline), data->dvbsrc, data->tee, NULL);
-
         g_print ("Added all the Elements into the pipeline\n");
 
         gst_element_link (data->dvbsrc, data->tee);
-
         data->tee_src_pad_template = gst_element_class_get_pad_template (GST_ELEMENT_GET_CLASS (data->tee), "src_%u");
-
-        for(j=0;j<6;j++)
-            data->tee_pad[j] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
     }
 
     /* Create filtering part */
@@ -241,7 +236,7 @@ int pipeline (char *info, int fd_socket)
                 current = strdup(chaine);
                 list->add(current);
 
-                //data->tee_pad[i] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
+                data->tee_pad[i] = gst_element_request_pad (data->tee, data->tee_src_pad_template, NULL, NULL);
 
                 /* Create gstreamer elements */
                 data->mpegtspidfilter[i] = gst_element_factory_make ("mpegtspidfilter", name_mpegtspidfilter);
